@@ -358,14 +358,494 @@ the 128-bit dividend and rax will be the lower 64-bits of the
 128-bit dividend.
 ```
 
-im guessing this is happens because all registers are 64 bit but div operation takes 128 bit divided \
-so we use 2 64 bit registers to perform the thing.
+so basically, `div reg` implies `rax = rax/reg` & `rdx = rax%reg`\
+and since we gotta perform `rdi/rsi` \
+we gotta set rax = rdi \
+so then `div rsi` should perform `rax = rdi/rsi` \
+and yes 
 
 ```python
 import pwn
 pwn.context.update("arch64")
 
 code = pwn.asm("""
-
+mov rax, rdi
+div rsi
 """)
+
+process = pwn.process("/challenge/run")
+process.write(code)
+print(process.readall())
 ```
+
+## flag > `pwn.college{Esre897YlX911GCMucki5ulDfqU.01N5EDL4UjM3QzW}`
+
+<br><br><br>
+***
+<br><br><br>
+
+# `level-6`
+
+
+### Challenge :
+
+```
+Modulo in assembly is another interesting concept!
+
+x86 allows you to get the remainder after a div operation.
+
+For instance: 10 / 3 -> remainder = 1
+
+The remainder is the same as modulo, which is also called the "mod" operator.
+
+In most programming languages we refer to mod with the symbol '%'.
+
+Please compute the following:
+  rdi % rsi
+
+Place the value in rax.
+
+We will now set the following in preparation for your code:
+  rdi = 0x12532de8
+  rsi = 0x7
+```
+
+
+### Solution :
+
+like we saw in the previous chal \
+`div reg` implies `rax = rax/reg` & `rdx = rax%reg` \
+So we gotta div rax = rdi with rsi and then call rdx, where the remainder of this operation is stored.
+
+```python
+import pwn
+pwn.context.update("arch64")
+
+code = pwn.asm("""
+mov rax, rdi
+div rsi
+mov rax, rdx
+""")
+
+process = pwn.process("/challenge/run")
+process.write(code)
+print(process.readall())
+```
+
+ez
+
+## flag > `pwn.college{IVOCMljYxvZ4u891kIdzE8_WotI.0FO5EDL4UjM3QzW}`
+
+<br><br><br>
+***
+<br><br><br>
+
+# `level-7`
+
+
+### Challenge :
+
+```
+Another cool concept in x86 is the ability to independently access to lower register bytes.
+
+Each register in x86_64 is 64 bits in size, and in the previous levels we have accessed
+the full register using rax, rdi or rsi.
+
+We can also access the lower bytes of each register using different register names.
+
+For example the lower 32 bits of rax can be accessed using eax, the lower 16 bits using ax,
+the lower 8 bits using al.
+
+MSB                                    LSB
++----------------------------------------+
+|                   rax                  |
++--------------------+-------------------+
+                     |        eax        |
+                     +---------+---------+
+                               |   ax    |
+                               +----+----+
+                               | ah | al |
+                               +----+----+
+
+Lower register bytes access is applicable to almost all registers.
+
+Using only one move instruction, please set the upper 8 bits of the ax register to 0x42.
+
+We will now set the following in preparation for your code:
+  rax = 0xd4130547870400e0
+```
+
+### Solution :
+
+```
+MSB                                    LSB
++----------------------------------------+
+|                   rax                  |
++--------------------+-------------------+
+                     |        eax        |
+                     +---------+---------+
+                               |   ax    |
+                               +----+----+
+                               | ah | al |
+                               +----+----+
+```
+
+from this chart, upper 8 bits of `ax` should mean `ah`, right ?
+so, `mov ah, thevalue` ?
+
+```python
+import pwn
+pwn.context.update("arch64")
+
+code = pwn.asm("""
+mov ah, 0x42
+""")
+
+process = pwn.process("/challenge/run")
+process.write(code)
+print(process.readall())
+```
+
+Yessir
+
+## flag > `pwn.college{Eo0JqICCRvIeQzGK17K9qnyUO79.dFTM4MDL4UjM3QzW}`
+
+<br><br><br>
+***
+<br><br><br>
+
+# `level-8`
+
+
+### Challenge :
+
+```
+It turns out that using the div operator to compute the modulo operation is slow!
+
+We can use a math trick to optimize the modulo operator (%). Compilers use this trick a lot.
+
+If we have "x % y", and y is a power of 2, such as 2^n, the result will be the lower n bits of x.
+
+Therefore, we can use the lower register byte access to efficiently implement modulo!
+
+Using only the following instruction(s):
+  mov
+
+Please compute the following:
+  rax = rdi % 256       256 = 2**8
+  rbx = rsi % 65536      65536 = 2**16
+
+We will now set the following in preparation for your code:
+  rdi = 0x238c
+  rsi = 0x2a4b22cb
+```
+### Solution :
+
+`If we have "x % y", and y is a power of 2, such as 2^n, the result will be the lower n bits of x.` \
+so for rdi % 256, 256 = 2**8,  I gotta access lower 8 bits of rdi (`dil`) and put that in rax.
+similarly, for rsi % 65536, 65536 = 2**16, I gotta access lower 16 bits of rsi (`si`) and put that in rbx
+
+found this when looking up the registers and their structures
+![image](https://github.com/IC3lemon/pwncollege/assets/150153966/02f45c0c-b37c-40de-ab85-cdf4cb9d44b4)
+
+```python
+import pwn
+pwn.context.update("arch64")
+
+code = pwn.asm("""
+mov rax, dil
+mov rbx, si
+""")
+process = pwn.process("/challenge/run")
+process.write(code)
+print(process.readall())
+```
+
+but this wasn't working \
+![image](https://github.com/IC3lemon/pwncollege/assets/150153966/833955bb-d442-48b1-8807-c508ab16a3d2) \
+ **???**
+
+ i looked it up and found this \
+ ![image](https://github.com/IC3lemon/pwncollege/assets/150153966/dde8ec87-205f-43e6-b344-5f5a5a70e8aa) 
+
+ So i think the mistake im making is that im tryna mov dil, which is a 8 bit reg, into rax, a 64 bit reg. \
+ but they're asking to move the modulo result into rax wtf. 
+
+
+ I then thought, maybe I ought to put the modulo result i.e. the 8 bit rdi reg into the 8 bit reg of rax \
+ i.e. mov dil into al which implies moving the lower 8 bits of rdi into lower 8 of rax, maybe then it works. \
+
+ aight so new code :
+```python
+code = pwn.asm("""
+mov al, dil
+mov bx, si
+""")
+process = pwn.process("/challenge/run")
+process.write(code)
+print(process.readall())
+```
+
+lesgoooo
+
+## flag > `pwn.college{8BGmIY3wLY7nenKEROfs5S-uP8z.0VO5EDL4UjM3QzW}`
+
+<br><br><br>
+***
+<br><br><br>
+
+# `level-9`
+
+
+### Challenge :
+
+```
+In this level you will be working with bit logic and operations. This will involve heavy use of
+directly interacting with bits stored in a register or memory location. You will also likely
+need to make use of the logic instructions in x86: and, or, not, xor.
+
+Shifting bits around in assembly is another interesting concept!
+
+x86 allows you to 'shift' bits around in a register.
+
+Take, for instance, al, the lowest 8 bits of rax.
+
+The value in al (in bits) is:
+  rax = 10001010
+
+If we shift once to the left using the shl instruction:
+  shl al, 1
+
+The new value is:
+  al = 00010100
+
+Everything shifted to the left and the highest bit fell off
+while a new 0 was added to the right side.
+
+You can use this to do special things to the bits you care about.
+
+Shifting has the nice side affect of doing quick multiplication (by 2)
+or division (by 2), and can also be used to compute modulo.
+
+Here are the important instructions:
+  shl reg1, reg2       <=>     Shift reg1 left by the amount in reg2
+  shr reg1, reg2       <=>     Shift reg1 right by the amount in reg2
+  Note: 'reg2' can be replaced by a constant or memory location
+
+Using only the following instructions:
+  mov, shr, shl
+
+Please perform the following:
+  Set rax to the 5th least significant byte of rdi.
+
+For example:
+  rdi = | B7 | B6 | B5 | B4 | B3 | B2 | B1 | B0 |
+  Set rax to the value of B4
+
+We will now set the following in preparation for your code:
+  rdi = 0x5968c45ce82f8a3a
+```
+
+### Solution :
+
+so set rax to B4, i.e. 5th value in rdi stack
+so the 4th BYTE in rdi is B4
+i amma shift B4 to the top of rdi, `shl rdi, 8*3`
+and then put it into rax
+
+but that didn't work
+![image](https://github.com/IC3lemon/pwncollege/assets/150153966/7a5168d9-ef97-4ee5-909a-cd5756756dce)
+
+![image](https://github.com/IC3lemon/pwncollege/assets/150153966/cd784140-2699-48c8-b445-6405401a74ca)
+
+im guessing this because the trailing bytes after c4 shouldn't be there, the thing wants rax to be only 0xc4 
+Ig i can shift rax to the rightmost by 7 bytes so that 0x00000000000000c4 i.e. 0xc4remains
+so `shr rax, 8*7`
+
+Aye, lesgo
+
+```python
+code = pwn.asm("""
+shl rdi, 8*3
+mov rax, rdi
+shr rax, 8*7
+""")
+process = pwn.process("/challenge/run")
+process.write(code)
+print(process.readall())
+```
+
+## flag > `pwn.college{MwZ0Ok68FJVrvXg-PMeh0PgpJ9l.0FMwIDL4UjM3QzW}`
+
+
+<br><br><br>
+***
+<br><br><br>
+
+# `level-10`
+
+
+### Challenge :
+
+```
+
+Bitwise logic in assembly is yet another interesting concept!
+x86 allows you to perform logic operations bit by bit on registers.
+
+For the sake of this example say registers only store 8 bits.
+
+The values in rax and rbx are:
+  rax = 10101010
+  rbx = 00110011
+
+If we were to perform a bitwise AND of rax and rbx using the
+"and rax, rbx" instruction, the result would be calculated by
+ANDing each bit pair 1 by 1 hence why it's called a bitwise
+logic.
+
+So from left to right:
+  1 AND 0 = 0
+  0 AND 0 = 0
+  1 AND 1 = 1
+  0 AND 1 = 0
+  ...
+
+Finally we combine the results together to get:
+  rax = 00100010
+
+Here are some truth tables for reference:
+      AND          OR           XOR
+   A | B | X    A | B | X    A | B | X
+  ---+---+---  ---+---+---  ---+---+---
+   0 | 0 | 0    0 | 0 | 0    0 | 0 | 0
+   0 | 1 | 0    0 | 1 | 1    0 | 1 | 1
+   1 | 0 | 0    1 | 0 | 1    1 | 0 | 1
+   1 | 1 | 1    1 | 1 | 1    1 | 1 | 0
+
+Without using the following instructions:
+  mov, xchg
+
+Please perform the following:
+  rax = rdi AND rsi
+
+i.e. Set rax to the value of (rdi AND rsi)
+
+We will now set the following in preparation for your code:
+  rdi = 0x58a911704b90e090
+  rsi = 0x7e2151fe15d0eadc
+```
+
+### Solution :
+
+Went straight ahead with `and rdi, rsi` \
+`mov rdi, rax`
+
+but noo
+mov not allowed \
+![image](https://github.com/IC3lemon/pwncollege/assets/150153966/3bd6d084-146c-4a93-95ce-47c23a070e62) \
+how tf do I do this without mov. 
+
+
+I hit `and rdi,rsi` to check what was in rax \
+![image](https://github.com/IC3lemon/pwncollege/assets/150153966/0538dbf3-347b-429d-8d7b-a9b6692c4a42)
+
+so rax = 0Xfffffffffffffff rn \
+i.e rax = 1111111111111111111111111111111111111111111111111111111111111111 (in binary)
+
+ok so let A =1 Then, \
+(A.B).C = B.C \
+so `and rax, rsi` \
+`and rax, rdi` \
+should do the trick
+
+by this logic, I cooked this 
+```python
+import pwn
+code = pwn.asm("""
+and rax, rsi
+and rax, rdi
+""")
+process = pwn.process("/challenge/run")
+process.write(code)
+print(process.readall())
+```
+
+## flag > `pwn.college{w8rKKXCMw-ioMbybzXbW6JcJhM3.0VMwIDL4UjM3QzW}`
+
+
+<br><br><br>
+***
+<br><br><br>
+
+# `level-11`
+
+
+### Challenge :
+```
+Using only the following instructions:
+  and, or, xor
+
+Implement the following logic:
+  if x is even then
+    y = 1
+  else
+    y = 0
+
+where:
+  x = rdi
+  y = rax
+
+We will now set the following in preparation for your code:
+  rdi = 0x3255ac06
+```
+
+### Solution :
+
+not gonna lie, was insanely clueless on this one for a while.
+not allowed to use mov, cmp, div
+
+I looked up `how to check if a number is even or odd with bitwise operations.` \
+and landed here : https://www.geeksforgeeks.org/check-if-a-number-is-odd-or-even-using-bitwise-operators \
+not that helpful, just helped recall that the last bit of an even number is always 0, and the last in an odd number is always 1.
+
+thinking this up took quite a while : \
+1. set rax to 0000000000000000000000000000000000000000000000000000000000000000
+   i figured `and rax, 0` should do it
+   
+2. and rdi with 1 \
+   what that does :
+   if rdi is even, the last bit would be 0 eg : 000111111000000001100001100000000000000111100011100010100111110
+   then, after `and rdi, 1` : rdi = 0000000000000000000000000000000000000000000000000000000000000000
+   similarly if rdi is odd, last bit would be 1 : 000111111000000001100001100000000000000111100011100010100111110
+   then, after `and rdi, 1` : rdi = 0000000000000000000000000000000000000000000000000000000000000001
+
+3. now the chall wants 1 if even;  0 if odd \
+   but we got the opposite rn. to fix that, xor with 1
+
+4. put the result in rax (which was set to 0)
+   `or rax, rdi`
+
+So the final solution i cooked :
+```python
+import pwn
+pwn.context.update("arch64")
+
+code = pwn.asm("""
+and rax, 0
+and rdi, 1
+xor rdi, 1
+or rax, rdi
+""")
+process = pwn.process("/challenge/run")
+process.write(code)
+print(process.readall())
+```
+
+this shi was not easy. \
+experienced insane amounts of skill issue.
+
+## flag > `pwn.college{sCbmNSNCbrAXqk6Jr0npT5Xg41e.0lMwIDL4UjM3QzW}`
+
+
+
+
