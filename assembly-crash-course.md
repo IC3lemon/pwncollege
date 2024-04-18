@@ -844,8 +844,453 @@ print(process.readall())
 this shi was not easy. \
 experienced insane amounts of skill issue.
 
+
+got it tho 
+
 ## flag > `pwn.college{sCbmNSNCbrAXqk6Jr0npT5Xg41e.0lMwIDL4UjM3QzW}`
 
+<br><br><br>
+
+***
+<br><br><br>
+
+# `level-12`
+
+
+### Challenge :
+
+```
+In this level you will be working with memory. This will require you to read or write
+to things stored linearly in memory. If you are confused, go look at the linear
+addressing module in 'ike. You may also be asked to dereference things, possibly multiple
+times, to things we dynamically put in memory for your use.
 
 
 
+Up until now you have worked with registers as the only way for storing things, essentially
+variables such as 'x' in math.
+
+However, we can also store bytes into memory!
+
+Recall that memory can be addressed, and each address contains something at that location.
+
+Note that this is similar to addresses in real life!
+
+As an example: the real address '699 S Mill Ave, Tempe, AZ
+85281' maps to the 'ASU Brickyard'.
+
+We would also say it points to 'ASU Brickyard'.
+
+We can represent this like:
+  ['699 S Mill Ave, Tempe, AZ 85281'] = 'ASU Brickyard'
+
+The address is special because it is unique.
+
+But that also does not mean other addresses can't point to the same thing (as someone can have multiple houses).
+
+Memory is exactly the same!
+
+For instance, the address in memory that your code is stored (when we take it from you) is 0x400000.
+
+In x86 we can access the thing at a memory location, called dereferencing, like so:
+  mov rax, [some_address]        <=>     Moves the thing at 'some_address' into rax
+
+This also works with things in registers:
+  mov rax, [rdi]         <=>     Moves the thing stored at the address of what rdi holds to rax
+
+This works the same for writing to memory:
+  mov [rax], rdi         <=>     Moves rdi to the address of what rax holds.
+
+So if rax was 0xdeadbeef, then rdi would get stored at the address 0xdeadbeef:
+  [0xdeadbeef] = rdi
+
+Note: memory is linear, and in x86_64, it goes from 0 - 0xffffffffffffffff (yes, huge).
+
+Please perform the following:
+  Place the value stored at 0x404000 into rax
+
+Make sure the value in rax is the original value stored at 0x404000.
+
+We will now set the following in preparation for your code:
+  [0x404000] = 0x18f019
+```
+
+### Solution :
+
+pretty direct, `mov rax, [some_address]        <=>     Moves the thing at 'some_address' into rax` \
+ez pz 
+
+
+```python
+import pwn
+pwn.context.update("arch64")
+
+code = pwn.asm("""
+mov rax, [0x404000]
+""")
+process = pwn.process("/challenge/run")
+process.write(code)
+print(process.readall())
+```
+
+## flag > `pwn.college{E7q_xloSrB83fYmCS-elxqGhudH.dJTM4MDL4UjM3QzW}`
+
+
+<br><br><br>
+
+***
+
+<br><br><br>
+
+# `level-13`
+
+
+### Challenge :
+
+```
+Please perform the following:
+  Place the value stored in rax to 0x404000
+
+We will now set the following in preparation for your code:
+  rax = 0x1b540d
+```
+
+### Solution :
+
+ogay its starting off too easy, something tough coming up later im sure
+
+```python
+import pwn
+pwn.context.update("arch64")
+
+code = pwn.asm("""
+mov [0x404000], rax
+""")
+
+process = pwn.process("/challenge/run")
+process.write(code)
+print(process.readall())
+""")
+```
+
+## flag > `pwn.college{wB8zWth9I8iDyL809383ald8PtP.dNTM4MDL4UjM3QzW}`
+
+<br><br><br>
+
+***
+
+<br><br><br>
+
+# `level-14`
+
+
+### Challenge : 
+
+```
+
+Please perform the following:
+  Place the value stored at 0x404000 into rax
+  Increment the value stored at the address 0x404000 by 0x1337
+
+Make sure the value in rax is the original value stored at 0x404000 and make sure
+that [0x404000] now has the incremented value.
+
+We will now set the following in preparation for your code:
+  [0x404000] = 0x13c17a
+
+```
+
+### Solution :
+
+I went straight ahead with 
+
+```
+mov rax, [0x404000]
+add [0x404000], 0x1337
+```
+
+but it did not work, \
+`Error: ambiguous operand size for 'add'` \
+I looked it up and found out that you gotta specify how big of a data type ur address pointing at \
+it might be a word, a dword or a qword. \
+So I just gotta write dword ptr infront and aye : 
+
+```python
+code = pwn.asm("""
+mov rax, [0x404000]
+add dword ptr [0x404000], 0x1337
+""")
+
+process = pwn.process("/challenge/run")
+process.write(code)
+print(process.readall())
+```
+
+## flag > `pwn.college{0UKLItBWOSZJWmGj4tWI9Llqp_o.01MwIDL4UjM3QzW}`
+
+
+<br><br><br>
+
+***
+
+<br><br><br>
+
+# `level-15`
+
+### Challenge : 
+
+```
+
+Recall that registers in x86_64 are 64 bits wide, meaning they can store 64 bits.
+
+Similarly, each memory location can be treated as a 64 bit value.
+
+We refer to something that is 64 bits (8 bytes) as a quad word.
+
+Here is the breakdown of the names of memory sizes:
+  Quad Word   = 8 Bytes = 64 bits
+  Double Word = 4 bytes = 32 bits
+  Word        = 2 bytes = 16 bits
+  Byte        = 1 byte  = 8 bits
+
+In x86_64, you can access each of these sizes when dereferencing an address, just like using
+bigger or smaller register accesses:
+  mov al, [address]        <=>        moves the least significant byte from address to rax
+  mov ax, [address]        <=>        moves the least significant word from address to rax
+  mov eax, [address]       <=>        moves the least significant double word from address to rax
+  mov rax, [address]       <=>        moves the full quad word from address to rax
+
+Remember that moving into al does not fully clear the upper bytes.
+
+Please perform the following:
+  Set rax to the byte at 0x404000
+
+We will now set the following in preparation for your code:
+  [0x404000] = 0x138608
+```
+
+### Solution : 
+
+` mov al, [address]        <=>        moves the least significant byte from address to rax` \
+exactly what they asking\
+and it workin
+
+```python
+import pwn
+pwn.context.update("arch64")
+
+code = pwn.asm("""
+mov al, [0x404000]
+""")
+
+process = pwn.process("/challenge/run")
+process.write(code)
+print(process.readall())
+```
+
+## flag > `pwn.college{4tIIXjsNDsyRD5QAAMNAJa45lPY.dRTM4MDL4UjM3QzW}`
+
+
+<br><br><br>
+
+***
+
+<br><br><br>
+
+# `level-16`
+
+### Challenge : 
+
+```
+Please perform the following:
+  Set rax to the byte at 0x404000
+  Set rbx to the word at 0x404000
+  Set rcx to the double word at 0x404000
+  Set rdx to the quad word at 0x404000
+
+We will now set the following in preparation for your code:
+  [0x404000] = 0x8db95af7cb468c3f
+
+```
+
+### Solution :
+
+Gonna use this again \
+![image](https://github.com/IC3lemon/pwncollege/assets/150153966/7cb3cd50-b032-4d40-8978-84f60eda6272)
+
+```python
+import pwn
+pwn.context.update("arch64")
+
+code = pwn.asm("""
+mov al, [0x404000]
+mov bx, [0x404000]
+mov ecx, [0x404000]
+mov rdx, [0x404000]
+""")
+process = pwn.process("/challenge/run")
+process.write(code)
+print(process.readall())
+```
+
+## flag > `pwn.college{Qgi8x7DvVUtNZgEgExgcCCgVO5G.0FNwIDL4UjM3QzW}`
+
+<br><br><br>
+
+***
+
+<br><br><br>
+
+# `level-17`
+
+### Challenge : 
+```
+
+In this level you will be working with memory. This will require you to read or write
+to things stored linearly in memory. If you are confused, go look at the linear
+addressing module in 'ike. You may also be asked to dereference things, possibly multiple
+times, to things we dynamically put in memory for your use.
+
+
+
+It is worth noting, as you may have noticed, that values are stored in reverse order of how we
+represent them.
+
+As an example, say:
+  [0x1330] = 0x00000000deadc0de
+
+If you examined how it actually looked in memory, you would see:
+  [0x1330] = 0xde
+  [0x1331] = 0xc0
+  [0x1332] = 0xad
+  [0x1333] = 0xde
+  [0x1334] = 0x00
+  [0x1335] = 0x00
+  [0x1336] = 0x00
+  [0x1337] = 0x00
+
+This format of storing things in 'reverse' is intentional in x86, and its called "Little Endian".
+
+For this challenge we will give you two addresses created dynamically each run.
+
+The first address will be placed in rdi.
+The second will be placed in rsi.
+
+Using the earlier mentioned info, perform the following:
+  Set [rdi] = 0xdeadbeef00001337
+  Set [rsi] = 0xc0ffee0000
+
+Hint: it may require some tricks to assign a big constant to a dereferenced register.
+Try setting a register to the constant value then assigning that register to the dereferenced register.
+
+We will now set the following in preparation for your code:
+  [0x404040] = 0xffffffffffffffff
+  [0x404b98] = 0xffffffffffffffff
+  rdi = 0x404040
+  rsi = 0x404b98
+```
+
+### Solution : 
+```
+Hint: it may require some tricks to assign a big constant to a dereferenced register.
+Try setting a register to the constant value then assigning that register to the dereferenced register.
+```
+
+i went ahead and did exactly this, stored the constants into rax, and then set rdi and rsi addresses to those constants via rax. 
+```python
+import pwn
+pwn.context.update("arch64")
+
+code = pwn.asm("""
+mov rax, 0xdeadbeef00001337
+mov [rdi], rax
+mov rax, 0xc0ffee0000
+mov [rsi], rax
+""")
+
+process = pwn.process("/challenge/run")
+process.write(code)
+print(process.readall())
+```
+
+ez pz
+
+## flag > `pwn.college{cwg7GG1Z4y5o5JrR-BFRfLpe4yd.0VNwIDL4UjM3QzW}`
+
+<br><br><br>
+
+***
+
+<br><br><br>
+
+# `level-18`
+
+### Challenge : 
+
+```
+
+Recall that memory is stored linearly.
+
+What does that mean?
+
+Say we access the quad word at 0x1337:
+  [0x1337] = 0x00000000deadbeef
+
+The real way memory is layed out is byte by byte, little endian:
+  [0x1337] = 0xef
+  [0x1337 + 1] = 0xbe
+  [0x1337 + 2] = 0xad
+  ...
+  [0x1337 + 7] = 0x00
+
+What does this do for us?
+
+Well, it means that we can access things next to each other using offsets,
+similar to what was shown above.
+
+Say you want the 5th *byte* from an address, you can access it like:
+  mov al, [address+4]
+
+Remember, offsets start at 0.
+
+Perform the following:
+  Load two consecutive quad words from the address stored in rdi
+  Calculate the sum of the previous steps quad words.
+  Store the sum at the address in rsi
+
+```
+
+### Solution :
+
+pretty straightforward.
+
+- load the value at rdi pointed address, 
+- add the above to the quad word beside it (8 bytes beside it ig)
+- store the sum in rsi
+
+```python
+import pwn
+pwn.context.update("arch64")
+
+code = pwn.asm("""
+mov rax, [rdi]
+add rax, [rdi + 8]
+mov [rsi], rax
+""")
+
+process = pwn.process("/challenge/run")
+process.write(code)
+print(process.readall())
+```
+
+## flag > `pwn.college{QHexeIbGOw8hE5FHFo5L_GMEN75.0lNwIDL4UjM3QzW}`
+
+<br><br><br>
+
+***
+
+<br><br><br>
+
+# `level-19`
+
+### Challenge : 
