@@ -1764,5 +1764,55 @@ A valid solution will use the following at least once:
 We will now run multiple tests on your code, here is an example run:
   (data) [0x404000] = {4 random dwords]}
   rdi = 0x404000
-
 ```
+
+### Solution :
+
+took insane inspiration from the example they gave. \
+managed to do it first try though 
+
+```python
+import pwn
+pwn.context.update("arch64")
+
+code = pwn.asm("""
+mov ebx, dword ptr [rdi + 4]
+cmp dword ptr [rdi], 0x7f454c46
+jne not_that
+add ebx, dword ptr [rdi + 8]
+add ebx, dword ptr [rdi + 12]
+jmp done
+
+not_that:
+    cmp dword ptr [rdi], 0x00005A4D
+    jne no
+    sub ebx, dword ptr [rdi + 8]
+    sub ebx, dword ptr [rdi + 12]
+    jmp done
+
+no:
+    imul ebx, dword ptr [rdi + 8]
+    imul ebx, dword ptr [rdi + 12]
+    jmp done
+
+done:
+    mov rax, rbx
+""")
+process = pwn.process("/challenge/run")
+process.write(code)
+print(process.readall())
+```
+
+## flag > `pwn.college{4Ic-bB9l9aao0TvIqsaXEsmLCc7.0VMxIDL4UjM3QzW}`
+
+
+
+<br><br><br>
+
+***
+
+<br><br><br>
+
+# `level-26`
+
+### Challenge : 
