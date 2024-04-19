@@ -1605,3 +1605,164 @@ Using the above knowledge, perform the following:
   Make that jmp a relative jump to 0x51 bytes from the current position
   At the code location where the relative jump will redirect control flow set rax to 0x1
 ```
+
+### Solution :
+
+ok so, jmp to label, execute the mov there. but label gotta be 0x51 from the current location. so nop 51 times before the label. 
+How do i nop 51 times ?? : `In fact, the as assembler that we're using has a handy .rept directive that you can use to
+repeat assembly instructions some number of times`
+
+
+  https://ftp.gnu.org/old-gnu/Manuals/gas-2.9.1/html_chapter/as_7.html
+
+
+```python
+code = pwn.asm("""
+jmp udhar
+
+.rept 0x51
+nop
+.endr
+
+udhar:
+    mov rax, 0x1
+""")
+process = pwn.process("/challenge/run")
+process.write(code)
+print(process.readall())
+```
+
+ayee
+
+## flag > `pwn.college{MkC8JpbJ9kXcK9mfjHQoUGxFct2.dZTM4MDL4UjM3QzW}`
+
+
+<br><br><br>
+
+***
+
+<br><br><br>
+
+# `level-24`
+
+### Challenge : 
+
+```
+
+Now, we will combine the two prior levels and perform the following:
+  Create a two jump trampoline:
+    Make the first instruction in your code a jmp
+    Make that jmp a relative jump to 0x51 bytes from its current position
+    At 0x51 write the following code:
+      Place the top value on the stack into register rdi
+      jmp to the absolute address 0x403000
+
+```
+
+### Solution : 
+
+Same as the last one, just executing a bit more stuff
+
+```python
+code = pwn.asm("""
+jmp udhar
+
+.rept 0x51
+nop
+.endr
+
+udhar:
+    pop rdi
+    mov rax, 0x403000
+    jmp rax
+""")
+process = pwn.process("/challenge/run")
+process.write(code)
+print(process.readall())
+```
+
+## flag > `pwn.college{ID5W-OgWnQWGeUtPjtGuV6wVu4e.0FMxIDL4UjM3QzW}`
+
+
+<br><br><br>
+
+***
+
+<br><br><br>
+
+# `level-25`
+
+### Challenge : 
+
+```
+
+We will now introduce you to conditional jumps--one of the most valuable instructions in x86.
+In higher level programming languages, an if-else structure exists to do things like:
+  if x is even:
+    is_even = 1
+  else:
+   is_even = 0
+
+This should look familiar, since it is implementable in only bit-logic, which you've done in a prior level.
+
+In these structures, we can control the program's control flow based on dynamic values provided to the program.
+
+Implementing the above logic with jmps can be done like so:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; assume rdi = x, rax is output
+; rdx = rdi mod 2
+mov rax, rdi
+mov rsi, 2
+div rsi
+; remainder is 0 if even
+cmp rdx, 0
+; jump to not_even code is its not 0
+jne not_even
+; fall through to even code
+mov rbx, 1
+jmp done
+; jump to this only when not_even
+not_even:
+mov rbx, 0
+done:
+mov rax, rbx
+; more instructions here
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Often though, you want more than just a single 'if-else'.
+
+Sometimes you want two if checks, followed by an else.
+
+To do this, you need to make sure that you have control flow that 'falls-through' to the next `if` after it fails.
+
+All must jump to the same `done` after execution to avoid the else.
+
+There are many jump types in x86, it will help to learn how they can be used.
+
+Nearly all of them rely on something called the ZF, the Zero Flag.
+
+The ZF is set to 1 when a cmp is equal. 0 otherwise.
+
+Using the above knowledge, implement the following:
+  if [x] is 0x7f454c46:
+    y = [x+4] + [x+8] + [x+12]
+  else if [x] is 0x00005A4D:
+    y = [x+4] - [x+8] - [x+12]
+  else:
+    y = [x+4] * [x+8] * [x+12]
+
+where:
+  x = rdi, y = rax.
+
+Assume each dereferenced value is a signed dword.
+This means the values can start as a negative value at each memory position.
+
+A valid solution will use the following at least once:
+  jmp (any variant), cmp
+
+We will now run multiple tests on your code, here is an example run:
+  (data) [0x404000] = {4 random dwords]}
+  rdi = 0x404000
+
+```
