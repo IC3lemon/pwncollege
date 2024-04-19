@@ -1294,3 +1294,314 @@ print(process.readall())
 # `level-19`
 
 ### Challenge : 
+
+```
+
+In this level you will be working with the stack, the memory region that dynamically expands
+and shrinks. You will be required to read and write to the stack, which may require you to use
+the pop and push instructions. You may also need to use the stack pointer register (rsp) to know
+where the stack is pointing.
+
+
+
+In these levels we are going to introduce the stack.
+
+The stack is a region of memory that can store values for later.
+
+To store a value on the stack we use the push instruction, and to retrieve a value we use pop.
+
+The stack is a last in first out (LIFO) memory structure, and this means
+the last value pushed in the first value popped.
+
+Imagine unloading plates from the dishwasher let's say there are 1 red, 1 green, and 1 blue.
+First we place the red one in the cabinet, then the green on top of the red, then the blue.
+
+Our stack of plates would look like:
+  Top ----> Blue
+            Green
+  Bottom -> Red
+
+Now, if we wanted a plate to make a sandwich we would retrieve the top plate from the stack
+which would be the blue one that was last into the cabinet, ergo the first one out.
+
+On x86, the pop instruction will take the value from the top of the stack and put it into a register.
+
+Similarly, the push instruction will take the value in a register and push it onto the top of the stack.
+
+Using these instructions, take the top value of the stack, subtract rdi from it, then put it back.
+```
+
+### Solution :
+
+`On x86, the pop instruction will take the value from the top of the stack and put it into a register.`
+
+`Similarly, the push instruction will take the value in a register and push it onto the top of the stack.`
+
+`Using these instructions, take the top value of the stack, subtract rdi from it, then put it back`
+
+
+v direct
+
+```python
+import pwn
+pwn.context.update("arch64")
+
+code = pwn.asm("""
+pop rax
+sub rax, rdi
+push rax
+""")
+process = pwn.process("/challenge/run")
+process.write(code)
+print(process.readall())
+```
+
+## flag > `pwn.college{A2-c678Og4w2NaZtSxzPTTyZYjy.01NwIDL4UjM3QzW}`
+
+<br><br><br>
+
+***
+
+<br><br><br>
+
+# `level-20`
+
+### Challenge : 
+
+```
+In this level we are going to explore the last in first out (LIFO) property of the stack.
+
+Using only following instructions:
+  push, pop
+
+Swap values in rdi and rsi.
+i.e.
+If to start rdi = 2 and rsi = 5
+Then to end rdi = 5 and rsi = 2
+
+We will now set the following in preparation for your code:
+  rdi = 0x2d48d16f
+  rsi = 0x3b43a057
+```
+
+### Solution :
+
+```
+Swap values in rdi and rsi.
+i.e.
+If to start rdi = 2 and rsi = 5
+Then to end rdi = 5 and rsi = 2
+```
+
+ok so im supposed to use only push and pop for this. \
+ill have to just exchange the values by pushing it into the stack and poppping into the required reg. \
+and ill use rax as temp.
+
+i used the same logic as
+```
+var1 = 'a'
+var2 = 'b'
+
+temp = var1
+var1 = var2
+var2 = temp
+```
+
+```python
+code = pwn.asm("""
+push rdi
+pop rax
+push rsi
+pop rdi
+push rax
+pop rsi
+""")
+process = pwn.process("/challenge/run")
+process.write(code)
+print(process.readall())
+```
+
+ez pz
+
+## flag > `pwn.college{UR-HMzQYGhoHzHBmx7YOELMF3Xb.0FOwIDL4UjM3QzW}`
+
+
+<br><br><br>
+
+***
+
+<br><br><br>
+
+# `level-21`
+
+### Challenge : 
+
+```
+
+In the previous levels you used push and pop to store and load data from the stack.
+
+However you can also access the stack directly using the stack pointer.
+
+On x86, the stack pointer is stored in the special register, rsp.
+rsp always stores the memory address of the top of the stack,
+i.e. the memory address of the last value pushed.
+
+Similar to the memory levels, we can use [rsp] to access the value at the memory address in rsp.
+
+Without using pop, please calculate the average of 4 consecutive quad words stored on the stack.
+
+Push the average on the stack.
+
+Hint:
+  RSP+0x?? Quad Word A
+  RSP+0x?? Quad Word B
+  RSP+0x?? Quad Word C
+  RSP      Quad Word D
+
+We will now set the following in preparation for your code:
+  (stack) [0x7fffff200000:0x7fffff1fffe0] = ['0x18efb358', '0x1e85f25f', '0x368c5e55', '0xfd249a2'] (list of things)
+```
+
+### Solution :
+
+Ye this was easy
+
+```python
+import pwn
+pwn.context.update("arch64")
+
+code = pwn.asm("""
+add rax, qword ptr [rsp]
+add rax, qword ptr [rsp+8]
+add rax, qword ptr [rsp+16]
+add rax, qword ptr [rsp+24]
+mov rdi, 4
+div rdi
+push rax
+""")
+process = pwn.process("/challenge/run")
+process.write(code)
+print(process.readall())
+```
+
+## flag > `pwn.college{MDtYB-yw94Gu_YhgXLyxhft6G2h.0VOwIDL4UjM3QzW}`
+
+
+<br><br><br>
+
+***
+
+<br><br><br>
+
+# `level-22`
+
+### Challenge : 
+
+```
+
+In this level you will be working with control flow manipulation. This involves using instructions
+to both indirectly and directly control the special register `rip`, the instruction pointer.
+You will use instructions such as: jmp, call, cmp, and their alternatives to implement the requested behavior.
+
+
+
+Earlier, you learned how to manipulate data in a pseudo-control way, but x86 gives us actual
+instructions to manipulate control flow directly.
+
+There are two major ways to manipulate control flow:
+ through a jump;
+ through a call.
+
+In this level, you will work with jumps.
+
+There are two types of jumps:
+  Unconditional jumps
+  Conditional jumps
+
+Unconditional jumps always trigger and are not based on the results of earlier instructions.
+
+As you know, memory locations can store data and instructions.
+
+Your code will be stored at 0x4000e1 (this will change each run).
+
+For all jumps, there are three types:
+  Relative jumps: jump + or - the next instruction.
+  Absolute jumps: jump to a specific address.
+  Indirect jumps: jump to the memory address specified in a register.
+
+In x86, absolute jumps (jump to a specific address) are accomplished by first putting the target address in a register reg, then doing jmp reg.
+
+In this level we will ask you to do an absolute jump.
+
+Perform the following:
+  Jump to the absolute address 0x403000
+
+We will now set the following in preparation for your code:
+  Loading your given code at: 0x4000e1
+```
+
+### Solution :
+
+`In x86, absolute jumps (jump to a specific address) are accomplished by first putting the target address in a register reg, then doing jmp reg.`
+
+```
+Perform the following:
+  Jump to the absolute address 0x403000
+```
+
+Did exactly as instructed
+
+```python
+import pwn
+pwn.context.update("arch64")
+
+code = pwn.asm("""
+mov rax, 0x403000
+jmp rax
+""")
+
+process = pwn.process("/challenge/run")
+process.write(code)
+print(process.readall())
+```
+
+## flag > `pwn.college{0LH1LEyEE_dkfQId2wpfVErEKFX.dVTM4MDL4UjM3QzW}`
+
+
+<br><br><br>
+
+***
+
+<br><br><br>
+
+# `level-23`
+
+### Challenge : 
+
+```
+
+Recall that for all jumps, there are three types:
+  Relative jumps
+  Absolute jumps
+  Indirect jumps
+
+In this level we will ask you to do a relative jump.
+
+You will need to fill space in your code with something to make this relative jump possible.
+
+We suggest using the `nop` instruction. It's 1 byte long and very predictable.
+
+In fact, the as assembler that we're using has a handy .rept directive that you can use to
+repeat assembly instructions some number of times:
+  https://ftp.gnu.org/old-gnu/Manuals/gas-2.9.1/html_chapter/as_7.html
+
+Useful instructions for this level:
+  jmp (reg1 | addr | offset) ; nop
+
+Hint: for the relative jump, lookup how to use `labels` in x86.
+
+Using the above knowledge, perform the following:
+  Make the first instruction in your code a jmp
+  Make that jmp a relative jump to 0x51 bytes from the current position
+  At the code location where the relative jump will redirect control flow set rax to 0x1
+```
