@@ -1816,3 +1816,218 @@ print(process.readall())
 # `level-26`
 
 ### Challenge : 
+
+```
+The last jump type is the indirect jump, which is often used for switch statements in the real world.
+
+Switch statements are a special case of if-statements that use only numbers to determine where the control flow will go.
+
+Here is an example:
+  switch(number):
+    0: jmp do_thing_0
+    1: jmp do_thing_1
+    2: jmp do_thing_2
+    default: jmp do_default_thing
+
+The switch in this example is working on `number`, which can either be 0, 1, or 2.
+
+In the case that `number` is not one of those numbers, the default triggers.
+
+You can consider this a reduced else-if type structure.
+
+In x86, you are already used to using numbers, so it should be no suprise that you can make if statements based on something being an exact number.
+
+In addition, if you know the range of the numbers, a switch statement works very well.
+
+Take for instance the existence of a jump table.
+
+A jump table is a contiguous section of memory that holds addresses of places to jump.
+
+In the above example, the jump table could look like:
+  [0x1337] = address of do_thing_0
+  [0x1337+0x8] = address of do_thing_1
+  [0x1337+0x10] = address of do_thing_2
+  [0x1337+0x18] = address of do_default_thing
+
+Using the jump table, we can greatly reduce the amount of cmps we use.
+
+Now all we need to check is if `number` is greater than 2.
+
+If it is, always do:
+  jmp [0x1337+0x18]
+Otherwise:
+  jmp [jump_table_address + number * 8]
+
+Using the above knowledge, implement the following logic:
+  if rdi is 0:
+    jmp 0x403002
+  else if rdi is 1:
+    jmp 0x4030da
+  else if rdi is 2:
+    jmp 0x4031f2
+  else if rdi is 3:
+    jmp 0x4032a9
+  else:
+    jmp 0x403372
+
+Please do the above with the following constraints:
+  Assume rdi will NOT be negative
+  Use no more than 1 cmp instruction
+  Use no more than 3 jumps (of any variant)
+  We will provide you with the number to 'switch' on in rdi.
+  We will provide you with a jump table base address in rsi.
+
+Here is an example table:
+  [0x404030] = 0x403002 (addrs will change)
+  [0x404038] = 0x4030da
+  [0x404040] = 0x4031f2
+  [0x404048] = 0x4032a9
+  [0x404050] = 0x403372
+```
+
+### Solution : 
+
+just like the example, 
+```
+check if rdi is greater than 3.
+
+If it is, always do:
+  jmp [rsi + 4 * 8]
+Otherwise:
+  jmp [rsi +  rdi * 8]
+```
+
+ez pz
+
+```python
+import pwn
+pwn.context.update("arch64")
+
+code = pwn.asm("""
+cmp rdi, 3
+jg else
+imul rdi, 8
+add rsi, rdi
+jmp [rsi]
+
+else:
+    add rsi, 32
+    jmp [rsi]
+""")
+process = pwn.process("/challenge/run")
+process.write(code)
+print(process.readall())
+```
+
+## flag > `pwn.college{8JCaWQRfB2NfFyeq5-A2ZKIFSzL.0lMxIDL4UjM3QzW}`
+
+
+
+<br><br><br>
+
+***
+
+<br><br><br>
+
+# `level-27`
+
+### Challenge : 
+
+```
+
+In a previous level you computed the average of 4 integer quad words, which
+was a fixed amount of things to compute, but how do you work with sizes you get when
+the program is running?
+
+In most programming languages a structure exists called the
+for-loop, which allows you to do a set of instructions for a bounded amount of times.
+The bounded amount can be either known before or during the programs run, during meaning
+the value is given to you dynamically.
+
+As an example, a for-loop can be used to compute the sum of the numbers 1 to n:
+  sum = 0
+  i = 1
+  while i <= n:
+    sum += i
+    i += 1
+
+Please compute the average of n consecutive quad words, where:
+  rdi = memory address of the 1st quad word
+  rsi = n (amount to loop for)
+  rax = average computed
+```
+
+### Solution : 
+
+```python
+import pwn
+pwn.context.update("arch64")
+
+code = pwn.asm("""
+mov rax, 0
+mov rbx, -1
+jmp while
+
+while:
+    add rbx, 1
+    add rax, [rdi + rbx * 8]
+    cmp rbx, rsi
+    jle while
+
+div rsi
+""")
+process = pwn.process("/challenge/run")
+process.write(code)
+print(process.readall())
+```
+
+## flag > `pwn.college{A1iqXQb_blJLGG5P9Y_zL8NYa7M.01MxIDL4UjM3QzW}`
+
+
+<br><br><br>
+
+***
+
+<br><br><br>
+
+# `level-28`
+
+### Challenge : 
+
+```
+In previous levels you discovered the for-loop to iterate for a *number* of times, both dynamically and
+statically known, but what happens when you want to iterate until you meet a condition?
+
+A second loop structure exists called the while-loop to fill this demand.
+
+In the while-loop you iterate until a condition is met.
+
+As an example, say we had a location in memory with adjacent numbers and we wanted
+to get the average of all the numbers until we find one bigger or equal to 0xff:
+  average = 0
+  i = 0
+  while x[i] < 0xff:
+    average += x[i]
+    i += 1
+  average /= i
+
+Using the above knowledge, please perform the following:
+  Count the consecutive non-zero bytes in a contiguous region of memory, where:
+    rdi = memory address of the 1st byte
+    rax = number of consecutive non-zero bytes
+
+Additionally, if rdi = 0, then set rax = 0 (we will check)!
+
+An example test-case, let:
+  rdi = 0x1000
+  [0x1000] = 0x41
+  [0x1001] = 0x42
+  [0x1002] = 0x43
+  [0x1003] = 0x00
+
+then: rax = 3 should be set
+
+We will now run multiple tests on your code, here is an example run:
+  (data) [0x404000] = {10 random bytes},
+  rdi = 0x404000
+```
