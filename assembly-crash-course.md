@@ -2031,3 +2031,227 @@ We will now run multiple tests on your code, here is an example run:
   (data) [0x404000] = {10 random bytes},
   rdi = 0x404000
 ```
+
+### Solution : 
+
+```python
+import pwn
+pwn.context.update("arch64")
+
+code = pwn.asm("""
+mov rax, 0
+mov rbx, 0
+cmp rdi, 0
+je exit
+mov rbx, -1
+
+while:
+    add rbx, 1
+    cmp byte ptr [rdi+rbx], 0
+    jne while
+
+exit:
+    mov rax,rbx
+""")
+process = pwn.process("/challenge/run")
+process.write(code)
+print(process.readall())
+```
+
+## flag > `pwn.college{M-YdS2P0zH591p15ZX_rsf03Whp.0FNxIDL4UjM3QzW}`
+
+<br><br><br>
+
+***
+
+<br><br><br>
+
+# `level-29`
+
+### Challenge : 
+
+```
+
+In this level you will be provided with a contiguous region of memory again and will loop
+over each performing a conditional operation till a zero byte is reached.
+All of which will be contained in a function!
+
+A function is a callable segment of code that does not destroy control flow.
+
+Functions use the instructions "call" and "ret".
+
+The "call" instruction pushes the memory address of the next instruction onto
+the stack and then jumps to the value stored in the first argument.
+
+Let's use the following instructions as an example:
+  0x1021 mov rax, 0x400000
+  0x1028 call rax
+  0x102a mov [rsi], rax
+
+1. call pushes 0x102a, the address of the next instruction, onto the stack.
+2. call jumps to 0x400000, the value stored in rax.
+
+The "ret" instruction is the opposite of "call".
+
+ret pops the top value off of the stack and jumps to it.
+
+Let's use the following instructions and stack as an example:
+
+                              Stack ADDR  VALUE
+  0x103f mov rax, rdx         RSP + 0x8   0xdeadbeef
+  0x1042 ret                  RSP + 0x0   0x0000102a
+
+Here, ret will jump to 0x102a
+
+Please implement the following logic:
+  str_lower(src_addr):
+    i = 0
+    if src_addr != 0:
+      while [src_addr] != 0x00:
+        if [src_addr] <= 0x5a:
+          [src_addr] = foo([src_addr])
+          i += 1
+        src_addr += 1
+    return i
+
+foo is provided at 0x403000.
+foo takes a single argument as a value and returns a value.
+
+All functions (foo and str_lower) must follow the Linux amd64 calling convention (also known as System V AMD64 ABI):
+  https://en.wikipedia.org/wiki/X86_calling_conventions#System_V_AMD64_ABI
+
+Therefore, your function str_lower should look for src_addr in rdi and place the function return in rax.
+
+An important note is that src_addr is an address in memory (where the string is located) and [src_addr] refers to the byte that exists at src_addr.
+
+Therefore, the function foo accepts a byte as its first argument and returns a byte.
+```
+
+### Solution : 
+
+```python
+import pwn
+pwn.context.update("arch64")
+code = pwn.asm("""
+mov rax, 0
+
+mov rsi,rdi
+cmp rsi,0
+je exit
+
+while_loop:
+    mov bl, [rsi]
+    cmp bl, 0
+    je exit
+
+    cmp bl,0x5a
+    jg foo_skip
+
+    mov dil,bl
+
+    mov rdx,rax
+    mov rcx,0x403000
+    call rcx
+    mov [rsi],al
+    mov rax,rdx
+
+    inc rax
+    jmp foo_skip
+
+
+foo_skip:
+    inc rsi
+    jmp while_loop
+
+exit:
+    ret
+""")
+process = pwn.process("/challenge/run")
+process.write(code)
+print(process.readall())
+```
+
+## flag > `pwn.college{gBAJEsA01f1kSZzQRVF6N14gJxD.0VNxIDL4UjM3QzW}`
+
+
+<br><br><br>
+
+***
+
+<br><br><br>
+
+# `level-30`
+
+### Challenge : 
+
+```
+In the previous level, you learned how to make your first function and how to call other functions.
+
+Now we will work with functions that have a function stack frame.
+
+A function stack frame is a set of pointers and values pushed onto the stack to save things for later use and allocate space on the stack for function variables.
+
+First, let's talk about the special register rbp, the Stack Base Pointer.
+
+The rbp register is used to tell where our stack frame first started.
+
+As an example, say we want to construct some list (a contigous space of memory) that is only used in our function.
+
+The list is 5 elements long, and each element is a dword.
+
+A list of 5 elements would already take 5 registers, so instead, we can make space on the stack!
+
+The assembly would look like:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; setup the base of the stack as the current top
+mov rbp, rsp
+; move the stack 0x14 bytes (5 * 4) down
+; acts as an allocation
+sub rsp, 0x14
+; assign list[2] = 1337
+mov eax, 1337
+mov [rbp-0x8], eax
+; do more operations on the list ...
+; restore the allocated space
+mov rsp, rbp
+ret
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Notice how rbp is always used to restore the stack to where it originally was.
+
+If we don't restore the stack after use, we will eventually run out.
+
+In addition, notice how we subtracted from rsp, because the stack grows down.
+
+To make the stack have more space, we subtract the space we need.
+
+The ret and call still works the same.
+
+Once, again, please make function(s) that implements the following:
+most_common_byte(src_addr, size):
+  i = 0
+  while i <= size-1:
+    curr_byte = [src_addr + i]
+    [stack_base - curr_byte] += 1
+    i += 1
+
+  b = 0
+  max_freq = 0
+  max_freq_byte = 0
+  while b <= 0xff:
+    if [stack_base - b] > max_freq:
+      max_freq = [stack_base - b]
+      max_freq_byte = b
+    b += 1
+
+  return max_freq_byte
+
+Assumptions:
+  There will never be more than 0xffff of any byte
+  The size will never be longer than 0xffff
+  The list will have at least one element
+Constraints:
+  You must put the "counting list" on the stack
+  You must restore the stack like in a normal function
+  You cannot modify the data at src_addr
+```
