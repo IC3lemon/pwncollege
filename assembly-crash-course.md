@@ -2259,59 +2259,70 @@ Constraints:
 ### Solution :
 
 
-** Not correct, wip
-
-
 ```asm
-mov rbx, 0
-mov r8, 0
-mov r9, 0
-mov rax, 0
-mov rbp, rsp
+import pwn
+pwn.context.update("arch64")
 
-sub rsp, 0xffff
+code = pwn.asm("""
+push 0
 
-mov rdx, rsi
-sub rdx, 1
-cmp rbx, rdx
-jle while_loop
-jmp while_loop_end
+mov rbp,rsp ;setting the base pointer to the top
 
-while_loop :
-    mov rcx, [rdi + rbx]
+;using rax as i
+mov rax,-1
+sub rsi,1   ;rsi has the size. now it got size-1
+sub rsp,rsi    ;making space on the stack
 
-    mov r10, rbp
-    sub r10, rcx
-    mov rdx, [r10]
-    inc rdx 
-    mov [r10], rdx
-    inc rbx
+pehla_loop:
+        add rax,1
+        cmp rax,rsi
+        jg pehle_loop_ke_baad
+        
+        mov rcx,0
+        mov cl,[rdi+rax]    ;rdi got the src_addr
+        mov r11,rbp         
+        sub r11,rcx
+        mov dl,[r11]
+        add dl,1
+        mov [r11],dl
+        jmp pehla_loop
+        
+pehle_loop_ke_baad:
+    mov rax,0   ;b = 0
+    mov rbx,0   ;max_freq = 0
+    mov rcx,0   ;most_freq_byte = 0
+    mov rax,-1
 
-    mov rdx, rsi
-    sub rdx, 1
-    cmp rbx, rdx
-    jle while_loop
-    jmp while_loop_end
+dusra_loop:
+        add rax,1
+        cmp ax,0xff
+        jg exit
+        
+        mov r11,rbp
+        sub r11,rax
+        mov dl,[r11]  
+        cmp dl,bl    ;dl= [src_addr - b]
+        jle dusra_loop
+        
+        mov bl,dl
+        mov cl,al
+        jmp dusra_loop
+       
 
-while_loop_end:
-    cmp r8, 0xff
-    jle second_while
-    jmp done
-
-second_while:
-    mov r10, rbp
-    sub r10, r8
-    cmp [r10], r9
-    jle iffail
-    mov r9, [r10]
-    mov rax, r8
-    jmp iffail
-
-iffail:
-    inc r8
-    jmp while_loop_end
-
-done:
-    mov rsp, rbp
+exit:
+    mov rax,rcx     ;rax = most_freq_byte because isko return karna
+    mov rsp,rbp     ;freeing up the stack
+    pop rbx
     ret
+""")
+process = pwn.process("/challenge/run")
+process.write(code)
+print(process.readall())
+
 ```
+
+## flag > `pwn.college{IirVlxKvc5K-USQLh6DZM6-scqI.0lNxIDL4UjM3QzW}`
+
+<br><br><br>
+
+***
