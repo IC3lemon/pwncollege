@@ -2255,3 +2255,63 @@ Constraints:
   You must restore the stack like in a normal function
   You cannot modify the data at src_addr
 ```
+
+### Solution :
+
+
+** Not correct, wip
+
+
+```asm
+mov rbx, 0
+mov r8, 0
+mov r9, 0
+mov rax, 0
+mov rbp, rsp
+
+sub rsp, 0xffff
+
+mov rdx, rsi
+sub rdx, 1
+cmp rbx, rdx
+jle while_loop
+jmp while_loop_end
+
+while_loop :
+    mov rcx, [rdi + rbx]
+
+    mov r10, rbp
+    sub r10, rcx
+    mov rdx, [r10]
+    inc rdx 
+    mov [r10], rdx
+    inc rbx
+
+    mov rdx, rsi
+    sub rdx, 1
+    cmp rbx, rdx
+    jle while_loop
+    jmp while_loop_end
+
+while_loop_end:
+    cmp r8, 0xff
+    jle second_while
+    jmp done
+
+second_while:
+    mov r10, rbp
+    sub r10, r8
+    cmp [r10], r9
+    jle iffail
+    mov r9, [r10]
+    mov rax, r8
+    jmp iffail
+
+iffail:
+    inc r8
+    jmp while_loop_end
+
+done:
+    mov rsp, rbp
+    ret
+```
