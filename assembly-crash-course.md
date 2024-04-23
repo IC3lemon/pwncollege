@@ -2259,7 +2259,7 @@ Constraints:
 ### Solution :
 
 
-```asm
+```python
 import pwn
 pwn.context.update("arch64")
 
